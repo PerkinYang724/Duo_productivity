@@ -1,11 +1,14 @@
+import { Eye, CircleCheck, CircleX, Clock } from "lucide-react";
 import Header from "../components/Header";
+import BottomNav from "../components/BottomNav";
+import RealtimeRefresher from "../components/RealtimeRefresher";
 import { requireAppUser } from "../../lib/dal";
 import { getTaskFor, getUserById } from "../../lib/db";
 import { todayDateString } from "../../lib/streakLogic";
-import {
-  approvePhotoAction,
-  rejectPhotoAction,
-} from "../../lib/actions";
+import { Card } from "../../components/ui/card";
+import { Eyebrow } from "../../components/ui/eyebrow";
+import { Badge } from "../../components/ui/badge";
+import VerifyButtons from "./VerifyButtons";
 
 export const dynamic = "force-dynamic";
 
@@ -18,78 +21,121 @@ export default async function VerificationPage() {
   return (
     <>
       <Header />
-      <main className="flex flex-1 flex-col items-center px-4 py-8">
-        <section className="w-full max-w-md">
-          <h1 className="text-xl font-semibold mb-1">Verify partner&apos;s photo</h1>
-          <p className="text-sm text-zinc-500 mb-6">{today}</p>
+      <RealtimeRefresher />
+      <main className="flex flex-1 flex-col items-center px-4 py-6 pb-24">
+        <section className="w-full max-w-[720px] flex flex-col gap-6">
+          <div>
+            <Eyebrow>Today · {today}</Eyebrow>
+            <h1 className="mt-1 text-[28px] font-medium text-[#3b6e45]">
+              Verify
+            </h1>
+          </div>
 
           {!partner ? (
-            <p className="text-sm text-zinc-500">
-              No partner linked yet. Ask one other person to sign up.
-            </p>
+            <EmptyState
+              icon={<Eye size={20} className="text-[#7a9e7e]" />}
+              title="No partner yet"
+              body="Once a partner signs up, you'll verify each other's daily completion photos here."
+            />
           ) : !partnerTask ? (
-            <p className="text-sm text-zinc-500">
-              {partner.name} hasn&apos;t submitted today&apos;s task yet.
-            </p>
+            <EmptyState
+              icon={<Clock size={20} className="text-[#7a9e7e]" />}
+              title={`Waiting on ${partner.name}`}
+              body="They haven't committed to a task today yet."
+            />
           ) : !partnerTask.photoUrl ? (
-            <p className="text-sm text-zinc-500">
-              {partner.name} submitted their task but hasn&apos;t uploaded a
-              photo yet.
-            </p>
+            <EmptyState
+              icon={<Clock size={20} className="text-[#7a9e7e]" />}
+              title={`${partner.name} is working on it`}
+              body="They committed to a task but haven't uploaded a completion photo yet."
+            />
           ) : (
-            <div className="flex flex-col gap-4">
-              <div className="border border-zinc-200 dark:border-zinc-800 rounded p-4">
-                <p className="text-xs uppercase tracking-wide text-zinc-500 mb-1">
-                  {partner.name}&apos;s task
+            <>
+              <Card className="flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Eyebrow>{partner.name}&apos;s task</Eyebrow>
+                  {partnerTask.status === "approved" ? (
+                    <Badge variant="approved">approved</Badge>
+                  ) : partnerTask.status === "rejected" ? (
+                    <Badge variant="rejected">rejected</Badge>
+                  ) : (
+                    <Badge variant="due-today">awaiting verify</Badge>
+                  )}
+                </div>
+                <p className="text-[15px] leading-[1.6] text-[#3b5e3b]">
+                  {partnerTask.taskText}
                 </p>
-                <p>{partnerTask.taskText}</p>
-                <p className="text-xs text-zinc-500 mt-2">
-                  Status: {partnerTask.status}
-                </p>
-              </div>
+              </Card>
 
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={partnerTask.photoUrl}
-                alt="Partner completion"
-                className="w-full rounded border border-zinc-200 dark:border-zinc-800"
-              />
+              <Card className="overflow-hidden p-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={partnerTask.photoUrl}
+                  alt="Partner completion"
+                  className="w-full"
+                />
+              </Card>
 
               {partnerTask.status === "approved" ? (
-                <p className="text-sm text-green-700">
-                  ✓ Approved. Streak update applied.
-                </p>
+                <Card className="flex items-start gap-3">
+                  <CircleCheck
+                    size={20}
+                    className="mt-0.5 shrink-0 text-[#5a9e6a]"
+                  />
+                  <div>
+                    <p className="text-[15px] font-medium text-[#3b6e45]">
+                      Approved.
+                    </p>
+                    <p className="mt-1 text-[13px] text-[#5a7a5a]">
+                      Streak update applied.
+                    </p>
+                  </div>
+                </Card>
               ) : partnerTask.status === "rejected" ? (
-                <p className="text-sm text-red-600">
-                  Rejected. Streak reset for today. They can resubmit a new
-                  photo.
-                </p>
+                <Card className="flex items-start gap-3">
+                  <CircleX
+                    size={20}
+                    className="mt-0.5 shrink-0 text-[#e8564a]"
+                  />
+                  <div>
+                    <p className="text-[15px] font-medium text-[#993530]">
+                      Rejected.
+                    </p>
+                    <p className="mt-1 text-[13px] text-[#5a7a5a]">
+                      Streak reset for today. They can resubmit a new photo.
+                    </p>
+                  </div>
+                </Card>
               ) : (
-                <div className="flex gap-3">
-                  <form action={approvePhotoAction} className="flex-1">
-                    <input type="hidden" name="taskId" value={partnerTask.id} />
-                    <button
-                      type="submit"
-                      className="w-full border border-zinc-300 dark:border-zinc-700 rounded px-4 py-2"
-                    >
-                      Approve
-                    </button>
-                  </form>
-                  <form action={rejectPhotoAction} className="flex-1">
-                    <input type="hidden" name="taskId" value={partnerTask.id} />
-                    <button
-                      type="submit"
-                      className="w-full border border-zinc-300 dark:border-zinc-700 rounded px-4 py-2"
-                    >
-                      Reject
-                    </button>
-                  </form>
-                </div>
+                <VerifyButtons taskId={partnerTask.id} />
               )}
-            </div>
+            </>
           )}
         </section>
       </main>
+      <BottomNav />
     </>
+  );
+}
+
+function EmptyState({
+  icon,
+  title,
+  body,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+}) {
+  return (
+    <Card className="flex flex-col items-center gap-3 py-10 text-center">
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#d4e8d4]">
+        {icon}
+      </span>
+      <p className="text-[15px] font-medium text-[#3b5e3b]">{title}</p>
+      <p className="max-w-[320px] text-[13px] leading-[1.6] text-[#7a9e7e]">
+        {body}
+      </p>
+    </Card>
   );
 }

@@ -8,9 +8,24 @@ create table if not exists app_users (
   auth_user_id uuid unique not null references auth.users(id) on delete cascade,
   email text not null,
   name text not null,
-  partner_id uuid references app_users(id),
+  partner_id uuid references app_users(id) on delete set null,
   created_at timestamptz not null default now()
 );
+
+-- Existing projects: ensure partner_id FK uses ON DELETE SET NULL so cascading
+-- auth.user deletes don't fail on the self-reference.
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint
+    where conname = 'app_users_partner_id_fkey'
+      and confdeltype <> 'n'
+  ) then
+    alter table app_users drop constraint app_users_partner_id_fkey;
+    alter table app_users add constraint app_users_partner_id_fkey
+      foreign key (partner_id) references app_users(id) on delete set null;
+  end if;
+end $$;
 
 create table if not exists daily_tasks (
   id uuid primary key default gen_random_uuid(),
@@ -43,6 +58,32 @@ insert into streak (id) values ('shared') on conflict do nothing;
 insert into storage.buckets (id, name, public)
 values ('completion-photos', 'completion-photos', true)
 on conflict do nothing;
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- Realtime: enable RLS + permissive read policies + add tables to the
+-- realtime publication so the client can subscribe to changes. Server actions
+-- use the service-role key, which bypasses RLS, so writes still work.
+-- ──────────────────────────────────────────────────────────────────────────────
+
+alter table app_users enable row level security;
+alter table daily_tasks enable row level security;
+alter table streak enable row level security;
+
+drop policy if exists "auth read app_users" on app_users;
+create policy "auth read app_users" on app_users
+  for select to authenticated using (true);
+
+drop policy if exists "auth read daily_tasks" on daily_tasks;
+create policy "auth read daily_tasks" on daily_tasks
+  for select to authenticated using (true);
+
+drop policy if exists "auth read streak" on streak;
+create policy "auth read streak" on streak
+  for select to authenticated using (true);
+
+-- Add tables to the realtime publication. Re-running this statement errors
+-- "relation is already member of publication"; that's harmless.
+alter publication supabase_realtime add table app_users, daily_tasks, streak;
 
 -- ──────────────────────────────────────────────────────────────────────────────
 -- Migrating from the previous Clerk-based schema?

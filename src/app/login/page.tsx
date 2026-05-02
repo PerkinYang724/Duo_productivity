@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Mail, Lock } from "lucide-react";
 import { supabaseBrowser } from "../../lib/supabase-browser";
+import { Card } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input, Label } from "../../components/ui/input";
 
 type Mode = "signin" | "signup";
 
@@ -48,70 +52,92 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center p-6">
+    <main className="flex flex-1 flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold mb-2">Duo Productivity</h1>
-        <p className="text-sm text-zinc-500 mb-6">
-          Sign in or create an account to start a streak.
-        </p>
+        <div className="mb-8 text-center">
+          <h1 className="text-[28px] font-medium text-[#3b6e45]">
+            Duo Productivity
+          </h1>
+          <p className="mt-2 text-[14px] leading-[1.7] text-[#5a7a5a]">
+            Two people. One task a day. One streak you keep together.
+          </p>
+        </div>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handle("signin");
-          }}
-          className="flex flex-col gap-3"
-        >
-          <label htmlFor="email" className="text-sm">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="border border-zinc-300 dark:border-zinc-700 rounded px-3 py-2 bg-transparent"
-          />
+        <Card className="p-6">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handle("signin");
+            }}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail
+                  size={16}
+                  className="pointer-events-none absolute left-[14px] top-1/2 -translate-y-1/2 text-[#7a9e7e]"
+                />
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="pl-[40px]"
+                />
+              </div>
+            </div>
 
-          <label htmlFor="password" className="text-sm">
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="border border-zinc-300 dark:border-zinc-700 rounded px-3 py-2 bg-transparent"
-          />
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Lock
+                  size={16}
+                  className="pointer-events-none absolute left-[14px] top-1/2 -translate-y-1/2 text-[#7a9e7e]"
+                />
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="pl-[40px]"
+                />
+              </div>
+            </div>
 
-          <div className="flex gap-2 mt-2">
-            <button
-              type="submit"
-              disabled={pending !== null}
-              className="flex-1 border border-zinc-300 dark:border-zinc-700 rounded px-4 py-2 disabled:opacity-50"
-            >
-              {pending === "signin" ? "Signing in..." : "Sign in"}
-            </button>
-            <button
-              type="button"
-              onClick={() => handle("signup")}
-              disabled={pending !== null}
-              className="flex-1 border border-zinc-300 dark:border-zinc-700 rounded px-4 py-2 disabled:opacity-50"
-            >
-              {pending === "signup" ? "Creating..." : "Create account"}
-            </button>
-          </div>
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="submit"
+                disabled={pending !== null}
+                className="flex-1"
+              >
+                {pending === "signin" ? "Signing in..." : "Sign in"}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => handle("signup")}
+                disabled={pending !== null}
+                className="flex-1"
+              >
+                {pending === "signup" ? "Creating..." : "Create account"}
+              </Button>
+            </div>
 
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        </form>
+            {error ? (
+              <p className="text-[13px] text-[#993530]">{error}</p>
+            ) : null}
+          </form>
+        </Card>
       </div>
     </main>
   );

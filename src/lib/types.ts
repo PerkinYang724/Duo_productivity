@@ -19,6 +19,8 @@ export type DailyTask = {
   photoUrl: string | null;
 };
 
+export type ActionResult = { ok: boolean; message?: string };
+
 export type StreakDoc = {
   currentStreak: number;
   startDate: string | null;

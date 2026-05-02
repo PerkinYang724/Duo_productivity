@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { CircleCheck, Camera, Clock, CircleX, ChevronRight } from "lucide-react";
 import Header from "../components/Header";
+import BottomNav from "../components/BottomNav";
+import RealtimeRefresher from "../components/RealtimeRefresher";
 import { requireAppUser } from "../../lib/dal";
 import {
   getStreak,
@@ -7,6 +10,11 @@ import {
   getUserById,
 } from "../../lib/db";
 import { todayDateString } from "../../lib/streakLogic";
+import { Card } from "../../components/ui/card";
+import { Eyebrow } from "../../components/ui/eyebrow";
+import { Badge } from "../../components/ui/badge";
+import InviteLink from "./InviteLink";
+import type { DailyTask } from "../../lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -21,62 +29,65 @@ export default async function DashboardPage() {
   return (
     <>
       <Header />
-      <main className="flex flex-1 flex-col items-center px-4 py-8">
-        <section className="w-full max-w-md flex flex-col items-center gap-2 mb-10">
-          <p className="text-sm uppercase tracking-wide text-zinc-500">
-            Current streak
-          </p>
-          <p className="text-7xl font-bold tabular-nums">
-            {streak.currentStreak}
-          </p>
-          <p className="text-sm text-zinc-500">
-            {streak.lastResetDate
-              ? `Broke on ${streak.lastResetDate} — start fresh tomorrow`
-              : streak.startDate
-              ? `Started ${streak.startDate}`
-              : "Start your first day together."}
-          </p>
-        </section>
+      <RealtimeRefresher />
+      <main className="flex flex-1 flex-col items-center px-4 py-6 pb-24">
+        <section className="w-full max-w-[720px] flex flex-col gap-6">
+          <StreakHero streak={streak} />
 
-        <section className="w-full max-w-md border border-zinc-200 dark:border-zinc-800 rounded p-4 mb-6">
-          <h2 className="text-sm uppercase tracking-wide text-zinc-500 mb-3">
-            Today ({today})
-          </h2>
-          <UserRow label="You" name={me.name} task={myTask} />
-          {partner ? (
-            <UserRow label="Partner" name={partner.name} task={partnerTask} />
-          ) : (
-            <p className="text-sm text-zinc-500 mt-3">
-              Waiting for a partner to sign up. Share the app with one other
-              person.
-            </p>
-          )}
-        </section>
+          <div className="flex flex-col gap-3">
+            <Eyebrow>Today · {today}</Eyebrow>
+            <Card className="flex flex-col gap-3 p-0">
+              <UserRow label="You" name={me.name} task={myTask} />
+              {partner ? (
+                <>
+                  <div className="h-px bg-[#d4e8d4] mx-4" />
+                  <UserRow
+                    label="Partner"
+                    name={partner.name}
+                    task={partnerTask}
+                  />
+                </>
+              ) : null}
+            </Card>
+            {!partner ? <InviteLink /> : null}
+          </div>
 
-        <section className="w-full max-w-md flex flex-col gap-2">
-          <Link
-            href="/task"
-            className="border border-zinc-300 dark:border-zinc-700 rounded px-4 py-3 text-center hover:bg-zinc-100 dark:hover:bg-zinc-900"
-          >
-            {myTask
-              ? myTask.photoUrl
-                ? myTask.status === "approved"
-                  ? "Task & photo approved ✓"
-                  : "Photo uploaded — waiting for approval"
-                : "Upload completion photo"
-              : "Submit today's task"}
-          </Link>
-          <Link
-            href="/verification"
-            className="border border-zinc-300 dark:border-zinc-700 rounded px-4 py-3 text-center hover:bg-zinc-100 dark:hover:bg-zinc-900"
-          >
-            {partnerTask?.photoUrl && partnerTask.status === "pending"
-              ? "Verify partner's photo"
-              : "Verification (no photo waiting)"}
-          </Link>
+          <NextActions
+            myTask={myTask}
+            partnerTask={partnerTask}
+            hasPartner={!!partner}
+          />
         </section>
       </main>
+      <BottomNav />
     </>
+  );
+}
+
+function StreakHero({
+  streak,
+}: {
+  streak: Awaited<ReturnType<typeof getStreak>>;
+}) {
+  const subtitle = streak.lastResetDate
+    ? `Last broke on ${streak.lastResetDate}. Start fresh today.`
+    : streak.startDate
+    ? `Going strong since ${streak.startDate}.`
+    : "Start your first day together.";
+
+  return (
+    <Card className="flex flex-col items-center gap-2 py-8">
+      <Eyebrow>Shared streak</Eyebrow>
+      <p className="text-[64px] font-medium leading-none text-[#c4a96a] tabular-nums">
+        {streak.currentStreak}
+      </p>
+      <p className="text-[14px] text-[#5a7a5a]">
+        {streak.currentStreak === 1 ? "day" : "days"}
+      </p>
+      <p className="mt-2 max-w-[320px] text-center text-[13px] text-[#7a9e7e]">
+        {subtitle}
+      </p>
+    </Card>
   );
 }
 
@@ -87,33 +98,115 @@ function UserRow({
 }: {
   label: string;
   name: string;
-  task: Awaited<ReturnType<typeof getTaskFor>>;
+  task: DailyTask | null;
 }) {
-  const symbol = !task ? "⏳" : task.status === "approved" ? "✓" : task.status === "rejected" ? "✗" : task.photoUrl ? "📷" : "✓";
-  const detail = !task
-    ? "no task yet"
-    : task.status === "approved"
-    ? "approved"
-    : task.status === "rejected"
-    ? "rejected — resubmit photo"
-    : task.photoUrl
-    ? "photo pending approval"
-    : "task submitted, photo pending";
   return (
-    <div className="flex items-center justify-between py-2 border-t first:border-t-0 border-zinc-200 dark:border-zinc-800">
-      <div>
-        <p className="text-xs text-zinc-500">{label}</p>
-        <p className="font-medium">{name}</p>
+    <div className="flex items-start gap-3 px-4 py-3">
+      <span className="mt-0.5 inline-flex h-9 w-9 items-center justify-center">
+        <StatusIcon task={task} />
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <Eyebrow>{label}</Eyebrow>
+          <StatusBadge task={task} />
+        </div>
+        <p className="mt-0.5 text-[15px] font-medium text-[#3b5e3b]">{name}</p>
         {task ? (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
+          <p className="mt-1 text-[13px] text-[#5a7a5a] leading-[1.6]">
             {task.taskText}
           </p>
-        ) : null}
-      </div>
-      <div className="text-right">
-        <span className="text-2xl">{symbol}</span>
-        <p className="text-xs text-zinc-500">{detail}</p>
+        ) : (
+          <p className="mt-1 text-[13px] text-[#a0b8a0]">No task yet today.</p>
+        )}
       </div>
     </div>
+  );
+}
+
+function StatusIcon({ task }: { task: DailyTask | null }) {
+  if (!task) return <Clock size={20} className="text-[#a0b8a0]" />;
+  if (task.status === "approved")
+    return <CircleCheck size={20} className="text-[#5a9e6a]" />;
+  if (task.status === "rejected")
+    return <CircleX size={20} className="text-[#e8564a]" />;
+  if (task.photoUrl) return <Camera size={20} className="text-[#c4a96a]" />;
+  return <Clock size={20} className="text-[#7a9e7e]" />;
+}
+
+function StatusBadge({ task }: { task: DailyTask | null }) {
+  if (!task) return null;
+  if (task.status === "approved")
+    return <Badge variant="approved">approved</Badge>;
+  if (task.status === "rejected")
+    return <Badge variant="rejected">rejected</Badge>;
+  if (task.photoUrl) return <Badge variant="due-today">awaiting verify</Badge>;
+  return <Badge variant="in-progress">in progress</Badge>;
+}
+
+function NextActions({
+  myTask,
+  partnerTask,
+  hasPartner,
+}: {
+  myTask: DailyTask | null;
+  partnerTask: DailyTask | null;
+  hasPartner: boolean;
+}) {
+  const showVerify =
+    hasPartner &&
+    !!partnerTask?.photoUrl &&
+    partnerTask.status === "pending";
+  const myActionHref = "/task";
+  const myActionLabel = !myTask
+    ? "Submit today's task"
+    : myTask.status === "approved"
+    ? "Today's task approved"
+    : myTask.photoUrl
+    ? "Photo waiting on partner"
+    : "Upload completion photo";
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Eyebrow>What now</Eyebrow>
+      <ActionRow href={myActionHref} label={myActionLabel} />
+      {showVerify ? (
+        <ActionRow
+          href="/verification"
+          label="Verify your partner's photo"
+          accent
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ActionRow({
+  href,
+  label,
+  accent,
+}: {
+  href: string;
+  label: string;
+  accent?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center justify-between rounded-[14px] border border-[#c8ddc8] bg-[#fffdf8] px-4 py-4 hover:bg-[#f0f4ee] active:scale-[0.99] transition-colors"
+    >
+      <span
+        className={
+          accent
+            ? "text-[15px] font-medium text-[#3b6e45]"
+            : "text-[15px] font-medium text-[#3b5e3b]"
+        }
+      >
+        {label}
+      </span>
+      <ChevronRight
+        size={20}
+        className="text-[#7a9e7e] group-hover:text-[#3b6e45] transition-colors"
+      />
+    </Link>
   );
 }

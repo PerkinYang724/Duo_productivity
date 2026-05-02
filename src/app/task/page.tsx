@@ -1,11 +1,15 @@
+import { CircleCheck } from "lucide-react";
 import Header from "../components/Header";
+import BottomNav from "../components/BottomNav";
+import RealtimeRefresher from "../components/RealtimeRefresher";
 import { requireAppUser } from "../../lib/dal";
 import { getTaskFor } from "../../lib/db";
 import { todayDateString } from "../../lib/streakLogic";
-import {
-  submitTaskAction,
-  uploadPhotoAction,
-} from "../../lib/actions";
+import { Card } from "../../components/ui/card";
+import { Eyebrow } from "../../components/ui/eyebrow";
+import { Badge } from "../../components/ui/badge";
+import SubmitTaskForm from "./SubmitTaskForm";
+import UploadPhotoForm from "./UploadPhotoForm";
 
 export const dynamic = "force-dynamic";
 
@@ -17,94 +21,69 @@ export default async function TaskPage() {
   return (
     <>
       <Header />
-      <main className="flex flex-1 flex-col items-center px-4 py-8">
-        <section className="w-full max-w-md">
-          <h1 className="text-xl font-semibold mb-1">Today&apos;s task</h1>
-          <p className="text-sm text-zinc-500 mb-6">{today}</p>
+      <RealtimeRefresher />
+      <main className="flex flex-1 flex-col items-center px-4 py-6 pb-24">
+        <section className="w-full max-w-[720px] flex flex-col gap-6">
+          <div>
+            <Eyebrow>Today · {today}</Eyebrow>
+            <h1 className="mt-1 text-[28px] font-medium text-[#3b6e45]">
+              {task ? "Your task" : "Pick today's task"}
+            </h1>
+          </div>
 
           {!task ? (
-            <form action={submitTaskAction} className="flex flex-col gap-3">
-              <label htmlFor="taskText" className="text-sm">
-                What&apos;s your one big thing today?
-              </label>
-              <input
-                id="taskText"
-                name="taskText"
-                maxLength={200}
-                required
-                placeholder="e.g. Ship the auth flow"
-                className="border border-zinc-300 dark:border-zinc-700 rounded px-3 py-2 bg-transparent"
-              />
-              <button
-                type="submit"
-                className="border border-zinc-300 dark:border-zinc-700 rounded px-4 py-2"
-              >
-                Submit task
-              </button>
-            </form>
+            <Card className="p-6">
+              <SubmitTaskForm />
+            </Card>
           ) : (
             <>
-              <div className="border border-zinc-200 dark:border-zinc-800 rounded p-4 mb-6">
-                <p className="text-xs uppercase tracking-wide text-zinc-500 mb-1">
-                  Submitted ✓
+              <Card className="flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Eyebrow>Committed</Eyebrow>
+                  {task.status === "approved" ? (
+                    <Badge variant="approved">approved</Badge>
+                  ) : task.status === "rejected" ? (
+                    <Badge variant="rejected">rejected</Badge>
+                  ) : task.photoUrl ? (
+                    <Badge variant="due-today">awaiting verify</Badge>
+                  ) : (
+                    <Badge variant="in-progress">in progress</Badge>
+                  )}
+                </div>
+                <p className="text-[15px] leading-[1.6] text-[#3b5e3b]">
+                  {task.taskText}
                 </p>
-                <p>{task.taskText}</p>
-                <p className="text-xs text-zinc-500 mt-2">
-                  Status: {task.status}
-                </p>
-              </div>
+              </Card>
 
               {task.status === "approved" ? (
-                <p className="text-sm text-green-700">
-                  Your partner approved your photo. Streak in progress.
-                </p>
-              ) : (
-                <form
-                  action={uploadPhotoAction}
-                  className="flex flex-col gap-3"
-                >
-                  <input type="hidden" name="taskId" value={task.id} />
-                  <label htmlFor="photo" className="text-sm">
-                    Upload completion photo
-                  </label>
-                  <input
-                    id="photo"
-                    name="photo"
-                    type="file"
-                    accept="image/*"
-                    required
-                    className="text-sm"
+                <Card className="flex items-start gap-3">
+                  <CircleCheck
+                    size={20}
+                    className="mt-0.5 shrink-0 text-[#5a9e6a]"
                   />
-                  {task.photoUrl ? (
-                    <div>
-                      <p className="text-xs text-zinc-500 mb-1">
-                        Current photo:
-                      </p>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={task.photoUrl}
-                        alt="Completion"
-                        className="max-w-full rounded border border-zinc-200 dark:border-zinc-800"
-                      />
-                    </div>
-                  ) : null}
-                  <button
-                    type="submit"
-                    className="border border-zinc-300 dark:border-zinc-700 rounded px-4 py-2"
-                  >
-                    {task.photoUrl ? "Replace photo" : "Upload photo"}
-                  </button>
-                  {task.status === "rejected" ? (
-                    <p className="text-sm text-red-600">
-                      Partner rejected the previous photo. Submit a new one.
+                  <div>
+                    <p className="text-[15px] font-medium text-[#3b6e45]">
+                      Approved by your partner.
                     </p>
-                  ) : null}
-                </form>
+                    <p className="mt-1 text-[13px] text-[#5a7a5a]">
+                      Streak in progress. Come back tomorrow.
+                    </p>
+                  </div>
+                </Card>
+              ) : (
+                <Card className="p-5">
+                  <UploadPhotoForm
+                    taskId={task.id}
+                    currentPhotoUrl={task.photoUrl}
+                    taskStatus={task.status}
+                  />
+                </Card>
               )}
             </>
           )}
         </section>
       </main>
+      <BottomNav />
     </>
   );
 }

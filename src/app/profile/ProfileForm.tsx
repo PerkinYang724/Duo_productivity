@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import { updateNameAction, type ProfileFormState } from "../../lib/actions";
+import { Button } from "../../components/ui/button";
+import { Input, Label } from "../../components/ui/input";
 
 export default function ProfileForm({
   email,
@@ -17,49 +19,45 @@ export default function ProfileForm({
   const currentName = state?.ok && state.name ? state.name : initialName;
 
   return (
-    <form action={action} className="flex flex-col gap-3">
-      <label htmlFor="email" className="text-sm">
-        Email
-      </label>
-      <input
-        id="email"
-        name="email"
-        type="email"
-        value={email}
-        disabled
-        className="border border-zinc-200 dark:border-zinc-800 rounded px-3 py-2 bg-zinc-100 dark:bg-zinc-900 text-zinc-500"
-      />
+    <form action={action} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          value={email}
+          disabled
+        />
+      </div>
 
-      <label htmlFor="name" className="text-sm mt-2">
-        Display name
-      </label>
-      <input
-        key={currentName}
-        id="name"
-        name="name"
-        type="text"
-        required
-        maxLength={50}
-        defaultValue={currentName}
-        className="border border-zinc-300 dark:border-zinc-700 rounded px-3 py-2 bg-transparent"
-      />
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="name">Display name</Label>
+        <Input
+          key={currentName}
+          id="name"
+          name="name"
+          type="text"
+          required
+          maxLength={50}
+          defaultValue={currentName}
+          placeholder="What should your partner see?"
+        />
+        <p className="text-[11px] font-mono text-[#a0b8a0]">Up to 50 characters.</p>
+      </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="border border-zinc-300 dark:border-zinc-700 rounded px-4 py-2 mt-2 disabled:opacity-50"
-      >
-        {pending ? "Saving..." : "Save changes"}
-      </button>
+      <Button type="submit" disabled={pending}>
+        {pending ? "Saving…" : "Save changes"}
+      </Button>
 
       {state ? (
-        <p
-          className={
-            state.ok ? "text-sm text-green-700" : "text-sm text-red-600"
-          }
-        >
-          {state.ok ? "Saved ✓ — your partner will see this on their next refresh." : state.message}
-        </p>
+        state.ok ? (
+          <p className="text-[13px] text-[#3b6e45]">
+            Saved. Your partner will see this on their next refresh.
+          </p>
+        ) : (
+          <p className="text-[13px] text-[#993530]">{state.message}</p>
+        )
       ) : null}
     </form>
   );
