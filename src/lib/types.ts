@@ -1,6 +1,6 @@
 export type AppUser = {
   id: string;
-  clerkId: string;
+  authUserId: string;
   email: string;
   name: string;
   partnerId: string | null;

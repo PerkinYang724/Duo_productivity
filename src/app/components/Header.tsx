@@ -1,14 +1,13 @@
 import Link from "next/link";
-import { UserButton } from "@clerk/nextjs";
-import { currentUser } from "@clerk/nextjs/server";
+import { signOutAction } from "../../lib/actions";
+import { supabaseServer } from "../../lib/supabase-server";
 
 export default async function Header() {
-  const user = await currentUser();
-  const name =
-    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
-    user?.username ||
-    user?.primaryEmailAddress?.emailAddress ||
-    "";
+  const sb = await supabaseServer();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  const email = user?.email ?? "";
 
   return (
     <header className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 px-4 py-3">
@@ -22,8 +21,18 @@ export default async function Header() {
         <Link href="/verification" className="hover:underline">
           Verify
         </Link>
-        <span className="text-zinc-500">{name}</span>
-        <UserButton />
+        <Link href="/profile" className="hover:underline">
+          Profile
+        </Link>
+        <span className="text-zinc-500 truncate max-w-[160px]">{email}</span>
+        <form action={signOutAction}>
+          <button
+            type="submit"
+            className="border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-xs"
+          >
+            Sign out
+          </button>
+        </form>
       </nav>
     </header>
   );

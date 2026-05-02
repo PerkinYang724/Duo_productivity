@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireAppUser } from "./dal";
+import { supabaseServer } from "./supabase-server";
 import { uploadPhotoBuffer } from "./storage";
 import {
   getTaskById,
@@ -10,8 +12,48 @@ import {
   submitDailyTask,
   incrementStreakIfBothApproved,
   resetStreak,
+  updateUserName,
 } from "./db";
 import { todayDateString } from "./streakLogic";
+
+export async function signOutAction(): Promise<void> {
+  const sb = await supabaseServer();
+  await sb.auth.signOut();
+  redirect("/login");
+}
+
+export type ProfileFormState = {
+  ok: boolean;
+  message: string;
+  name?: string;
+};
+
+export async function updateNameAction(
+  _prev: ProfileFormState | null,
+  formData: FormData
+): Promise<ProfileFormState> {
+  try {
+    const user = await requireAppUser();
+    const name = String(formData.get("name") ?? "").trim();
+    if (!name) return { ok: false, message: "Name is required." };
+    if (name.length > 50)
+      return { ok: false, message: "Name is too long (max 50 chars)." };
+
+    await updateUserName(user.id, name);
+
+    revalidatePath("/profile");
+    revalidatePath("/dashboard");
+    revalidatePath("/task");
+    revalidatePath("/verification");
+
+    return { ok: true, message: "Saved.", name };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Something went wrong.",
+    };
+  }
+}
 
 export async function submitTaskAction(formData: FormData): Promise<void> {
   const user = await requireAppUser();

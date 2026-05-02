@@ -6,7 +6,7 @@ const STREAK_ID = "shared";
 
 type UserRow = {
   id: string;
-  clerk_id: string;
+  auth_user_id: string;
   email: string;
   name: string;
   partner_id: string | null;
@@ -16,7 +16,7 @@ type UserRow = {
 function rowToUser(r: UserRow): AppUser {
   return {
     id: r.id,
-    clerkId: r.clerk_id,
+    authUserId: r.auth_user_id,
     email: r.email,
     name: r.name,
     partnerId: r.partner_id,
@@ -70,7 +70,7 @@ function rowToStreak(r: StreakRow): StreakDoc {
 }
 
 export async function getOrCreateUser(args: {
-  clerkId: string;
+  authUserId: string;
   email: string;
   name: string;
 }): Promise<AppUser> {
@@ -78,14 +78,14 @@ export async function getOrCreateUser(args: {
   const { data: existing, error: selErr } = await sb
     .from("app_users")
     .select("*")
-    .eq("clerk_id", args.clerkId)
+    .eq("auth_user_id", args.authUserId)
     .maybeSingle();
   if (selErr) throw selErr;
   if (existing) return rowToUser(existing as UserRow);
 
   const { data: created, error: insErr } = await sb
     .from("app_users")
-    .insert({ clerk_id: args.clerkId, email: args.email, name: args.name })
+    .insert({ auth_user_id: args.authUserId, email: args.email, name: args.name })
     .select()
     .single();
   if (insErr) throw insErr;
@@ -136,6 +136,15 @@ async function autoLinkPartner(newUserId: string): Promise<void> {
     last_updated: new Date().toISOString(),
   });
   if (e3) throw e3;
+}
+
+export async function updateUserName(userId: string, name: string): Promise<void> {
+  const sb = supabase();
+  const { error } = await sb
+    .from("app_users")
+    .update({ name })
+    .eq("id", userId);
+  if (error) throw error;
 }
 
 export async function getUserById(userId: string): Promise<AppUser | null> {

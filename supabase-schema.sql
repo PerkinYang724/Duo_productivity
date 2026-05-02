@@ -5,7 +5,7 @@ create extension if not exists "pgcrypto";
 
 create table if not exists app_users (
   id uuid primary key default gen_random_uuid(),
-  clerk_id text unique not null,
+  auth_user_id uuid unique not null references auth.users(id) on delete cascade,
   email text not null,
   name text not null,
   partner_id uuid references app_users(id),
@@ -43,3 +43,15 @@ insert into streak (id) values ('shared') on conflict do nothing;
 insert into storage.buckets (id, name, public)
 values ('completion-photos', 'completion-photos', true)
 on conflict do nothing;
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- Migrating from the previous Clerk-based schema?
+-- Uncomment and run these once to convert clerk_id (text) to auth_user_id (uuid).
+-- They drop existing data because the test run had only a handful of rows.
+-- ──────────────────────────────────────────────────────────────────────────────
+-- update streak set user1_id = null, user2_id = null where id = 'shared';
+-- delete from daily_tasks;
+-- delete from app_users;
+-- alter table app_users drop column if exists clerk_id;
+-- alter table app_users add column if not exists auth_user_id uuid unique
+--   references auth.users(id) on delete cascade;

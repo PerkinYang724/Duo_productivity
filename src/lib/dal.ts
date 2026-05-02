@@ -1,20 +1,23 @@
 import "server-only";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { supabaseServer } from "./supabase-server";
 import { getOrCreateUser } from "./db";
 import type { AppUser } from "./types";
 
 export async function requireAppUser(): Promise<AppUser> {
-  const { userId } = await auth();
-  if (!userId) {
-    throw new Error("Not authenticated");
+  const sb = await supabaseServer();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) {
+    redirect("/login");
   }
-  const user = await currentUser();
-  const email = user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses?.[0]?.emailAddress ?? "";
+  const email = user.email ?? "";
   const name =
-    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
-    user?.username ||
-    email ||
+    (user.user_metadata?.full_name as string | undefined) ||
+    (user.user_metadata?.name as string | undefined) ||
+    email.split("@")[0] ||
     "Anonymous";
 
-  return await getOrCreateUser({ clerkId: userId, email, name });
+  return await getOrCreateUser({ authUserId: user.id, email, name });
 }
