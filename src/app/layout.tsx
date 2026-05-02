@@ -15,11 +15,23 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Duo Productivity",
   description: "Two-person accountability with shared streaks.",
+  applicationName: "Duo",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Duo",
+  },
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
   themeColor: "#f0f4ee",
 };

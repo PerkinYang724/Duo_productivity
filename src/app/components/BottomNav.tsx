@@ -17,7 +17,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="sticky bottom-0 z-20 grid grid-cols-4 border-t border-[#d4e8d4] bg-[#fffdf8]/95 backdrop-blur px-2 pt-1.5"
+      className="sticky bottom-0 z-20 grid grid-cols-4 border-t border-[#d4e8d4] bg-[#fffdf8] px-1 pt-1.5"
       style={{ paddingBottom: "max(0.375rem, env(safe-area-inset-bottom))" }}
     >
       {TABS.map(({ href, label, icon: Icon }) => {
@@ -26,7 +26,10 @@ export default function BottomNav() {
           <Link
             key={href}
             href={href}
-            className="flex flex-col items-center gap-0.5 py-1.5"
+            prefetch
+            aria-label={label}
+            aria-current={active ? "page" : undefined}
+            className="flex flex-col items-center justify-center gap-0.5 min-h-[56px] py-1 rounded-[10px] active:bg-[#f0f4ee] transition-colors select-none"
           >
             <span
               className={cn(
