@@ -286,6 +286,33 @@ export async function incrementStreakIfBothApproved(
   return rowToStreak(updated as StreakRow);
 }
 
+export async function getCompletedDates(args: {
+  user1Id: string;
+  user2Id: string;
+  startDate: string;
+  endDate: string;
+}): Promise<string[]> {
+  const sb = supabase();
+  const { data, error } = await sb
+    .from("daily_tasks")
+    .select("date,user_id")
+    .in("user_id", [args.user1Id, args.user2Id])
+    .eq("status", "approved")
+    .gte("date", args.startDate)
+    .lte("date", args.endDate);
+  if (error) throw error;
+
+  const byDate: Record<string, Set<string>> = {};
+  for (const row of (data ?? []) as { date: string; user_id: string }[]) {
+    if (!byDate[row.date]) byDate[row.date] = new Set();
+    byDate[row.date].add(row.user_id);
+  }
+  return Object.entries(byDate)
+    .filter(([, users]) => users.has(args.user1Id) && users.has(args.user2Id))
+    .map(([date]) => date)
+    .sort();
+}
+
 export async function resetStreak(date: string): Promise<StreakDoc> {
   const sb = supabase();
   const { data, error } = await sb

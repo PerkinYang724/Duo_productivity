@@ -5,6 +5,7 @@ import BottomNav from "../components/BottomNav";
 import RealtimeRefresher from "../components/RealtimeRefresher";
 import { requireAppUser } from "../../lib/dal";
 import {
+  getCompletedDates,
   getStreak,
   getTaskFor,
   getUserById,
@@ -14,6 +15,7 @@ import { Card } from "../../components/ui/card";
 import { Eyebrow } from "../../components/ui/eyebrow";
 import { Badge } from "../../components/ui/badge";
 import InviteLink from "./InviteLink";
+import HistoryCard from "./HistoryCard";
 import type { DailyTask } from "../../lib/types";
 
 export const dynamic = "force-dynamic";
@@ -26,13 +28,35 @@ export default async function DashboardPage() {
   const partner = me.partnerId ? await getUserById(me.partnerId) : null;
   const partnerTask = partner ? await getTaskFor(partner.id, today) : null;
 
+  const yearStart = (() => {
+    const [y, m] = today.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1 - 11, 1));
+    return dt.toISOString().slice(0, 10);
+  })();
+  const completedDates =
+    streak.user1Id && streak.user2Id
+      ? await getCompletedDates({
+          user1Id: streak.user1Id,
+          user2Id: streak.user2Id,
+          startDate: yearStart,
+          endDate: today,
+        })
+      : [];
+
   return (
     <>
       <Header />
       <RealtimeRefresher />
       <main className="flex flex-1 flex-col items-center px-4 py-6 pb-24">
         <section className="w-full max-w-[720px] flex flex-col gap-6">
-          <StreakHero streak={streak} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
+            <StreakHero streak={streak} />
+            <HistoryCard
+              completedDates={completedDates}
+              today={today}
+              hasPartner={!!partner}
+            />
+          </div>
 
           <div className="flex flex-col gap-3">
             <Eyebrow>Today · {today}</Eyebrow>
@@ -76,15 +100,15 @@ function StreakHero({
     : "Start your first day together.";
 
   return (
-    <Card className="flex flex-col items-center gap-2 py-8">
+    <Card className="flex flex-col items-center justify-center gap-2 py-6 min-h-full">
       <Eyebrow>Shared streak</Eyebrow>
-      <p className="text-[64px] font-medium leading-none text-[#c4a96a] tabular-nums">
+      <p className="text-[56px] sm:text-[64px] font-medium leading-none text-[#c4a96a] tabular-nums">
         {streak.currentStreak}
       </p>
-      <p className="text-[14px] text-[#5a7a5a]">
+      <p className="text-[13px] text-[#5a7a5a]">
         {streak.currentStreak === 1 ? "day" : "days"}
       </p>
-      <p className="mt-2 max-w-[320px] text-center text-[13px] text-[#7a9e7e]">
+      <p className="mt-1 max-w-[260px] text-center text-[12px] text-[#7a9e7e] leading-[1.5]">
         {subtitle}
       </p>
     </Card>
