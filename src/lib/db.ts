@@ -32,6 +32,7 @@ type TaskRow = {
   submitted_at: string;
   status: TaskStatus;
   photo_url: string | null;
+  edited: boolean;
 };
 
 function rowToTask(r: TaskRow): DailyTask {
@@ -43,6 +44,7 @@ function rowToTask(r: TaskRow): DailyTask {
     submittedAt: new Date(r.submitted_at).getTime(),
     status: r.status,
     photoUrl: r.photo_url,
+    edited: r.edited,
   };
 }
 
@@ -197,6 +199,35 @@ export async function submitDailyTask(args: {
   return rowToTask(data as TaskRow);
 }
 
+export async function editDailyTask(args: {
+  taskId: string;
+  userId: string;
+  taskText: string;
+}): Promise<DailyTask> {
+  const sb = supabase();
+  const { data: existing, error: selErr } = await sb
+    .from("daily_tasks")
+    .select("*")
+    .eq("id", args.taskId)
+    .maybeSingle();
+  if (selErr) throw selErr;
+  if (!existing) throw new Error("Task not found.");
+  const row = existing as TaskRow;
+  if (row.user_id !== args.userId) throw new Error("Not your task.");
+  if (row.edited) throw new Error("You've already edited today's task.");
+  if (row.status === "approved")
+    throw new Error("Approved tasks can't be edited.");
+
+  const { data, error } = await sb
+    .from("daily_tasks")
+    .update({ task_text: args.taskText, edited: true })
+    .eq("id", args.taskId)
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToTask(data as TaskRow);
+}
+
 export async function setTaskPhoto(
   taskId: string,
   photoUrl: string
@@ -284,33 +315,6 @@ export async function incrementStreakIfBothApproved(
     .single();
   if (upErr) throw upErr;
   return rowToStreak(updated as StreakRow);
-}
-
-export async function getCompletedDates(args: {
-  user1Id: string;
-  user2Id: string;
-  startDate: string;
-  endDate: string;
-}): Promise<string[]> {
-  const sb = supabase();
-  const { data, error } = await sb
-    .from("daily_tasks")
-    .select("date,user_id")
-    .in("user_id", [args.user1Id, args.user2Id])
-    .eq("status", "approved")
-    .gte("date", args.startDate)
-    .lte("date", args.endDate);
-  if (error) throw error;
-
-  const byDate: Record<string, Set<string>> = {};
-  for (const row of (data ?? []) as { date: string; user_id: string }[]) {
-    if (!byDate[row.date]) byDate[row.date] = new Set();
-    byDate[row.date].add(row.user_id);
-  }
-  return Object.entries(byDate)
-    .filter(([, users]) => users.has(args.user1Id) && users.has(args.user2Id))
-    .map(([date]) => date)
-    .sort();
 }
 
 export async function resetStreak(date: string): Promise<StreakDoc> {

@@ -6,6 +6,7 @@ import { requireAppUser } from "./dal";
 import { supabaseServer } from "./supabase-server";
 import { uploadPhotoBuffer } from "./storage";
 import {
+  editDailyTask,
   getTaskById,
   setTaskPhoto,
   setTaskStatus,
@@ -57,10 +58,17 @@ export async function updateNameAction(
 }
 
 function fail(err: unknown): ActionResult {
-  return {
-    ok: false,
-    message: err instanceof Error ? err.message : "Something went wrong.",
-  };
+  console.error("[action error]", err);
+  if (err instanceof Error) return { ok: false, message: err.message };
+  if (
+    err &&
+    typeof err === "object" &&
+    "message" in err &&
+    typeof (err as { message: unknown }).message === "string"
+  ) {
+    return { ok: false, message: (err as { message: string }).message };
+  }
+  return { ok: false, message: "Something went wrong." };
 }
 
 export async function submitTaskAction(
@@ -78,6 +86,30 @@ export async function submitTaskAction(
     revalidatePath("/dashboard");
     revalidatePath("/task");
     return { ok: true, message: "Task submitted." };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+export async function editTaskAction(
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  try {
+    const user = await requireAppUser();
+    const taskId = String(formData.get("taskId") ?? "");
+    const taskText = String(formData.get("taskText") ?? "").trim();
+    if (!taskId) return { ok: false, message: "Missing task id." };
+    if (!taskText) return { ok: false, message: "Task text is required." };
+    if (taskText.length > 200)
+      return { ok: false, message: "Task is too long (max 200 chars)." };
+
+    await editDailyTask({ taskId, userId: user.id, taskText });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/task");
+    revalidatePath("/verification");
+    return { ok: true, message: "Task updated." };
   } catch (err) {
     return fail(err);
   }

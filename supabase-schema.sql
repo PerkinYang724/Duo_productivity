@@ -35,8 +35,11 @@ create table if not exists daily_tasks (
   submitted_at timestamptz not null default now(),
   status text not null default 'pending' check (status in ('pending','approved','rejected')),
   photo_url text,
+  edited boolean not null default false,
   unique (user_id, date)
 );
+
+alter table daily_tasks add column if not exists edited boolean not null default false;
 
 create index if not exists daily_tasks_date_idx on daily_tasks (date);
 

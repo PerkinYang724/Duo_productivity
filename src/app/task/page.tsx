@@ -7,9 +7,9 @@ import { getTaskFor } from "../../lib/db";
 import { todayDateString } from "../../lib/streakLogic";
 import { Card } from "../../components/ui/card";
 import { Eyebrow } from "../../components/ui/eyebrow";
-import { Badge } from "../../components/ui/badge";
 import SubmitTaskForm from "./SubmitTaskForm";
 import UploadPhotoForm from "./UploadPhotoForm";
+import CommittedTaskCard from "./CommittedTaskCard";
 
 export const dynamic = "force-dynamic";
 
@@ -37,23 +37,7 @@ export default async function TaskPage() {
             </Card>
           ) : (
             <>
-              <Card className="flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-2">
-                  <Eyebrow>Committed</Eyebrow>
-                  {task.status === "approved" ? (
-                    <Badge variant="approved">approved</Badge>
-                  ) : task.status === "rejected" ? (
-                    <Badge variant="rejected">rejected</Badge>
-                  ) : task.photoUrl ? (
-                    <Badge variant="due-today">awaiting verify</Badge>
-                  ) : (
-                    <Badge variant="in-progress">in progress</Badge>
-                  )}
-                </div>
-                <p className="text-[15px] leading-[1.6] text-[#3b5e3b]">
-                  {task.taskText}
-                </p>
-              </Card>
+              <CommittedTaskCard task={task} />
 
               {task.status === "approved" ? (
                 <Card className="flex items-start gap-3">

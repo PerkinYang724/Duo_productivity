@@ -17,6 +17,7 @@ export type DailyTask = {
   submittedAt: number;
   status: TaskStatus;
   photoUrl: string | null;
+  edited: boolean;
 };
 
 export type ActionResult = { ok: boolean; message?: string };
