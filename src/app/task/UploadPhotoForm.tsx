@@ -1,10 +1,44 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Camera, RefreshCw } from "lucide-react";
 import { uploadPhotoAction } from "../../lib/actions";
 import type { ActionResult } from "../../lib/types";
 import { Button } from "../../components/ui/button";
+
+const MAX_DIM = 1600;
+const JPEG_QUALITY = 0.85;
+
+async function compressImage(file: File): Promise<Blob> {
+  if (!file.type.startsWith("image/")) return file;
+  try {
+    const img = await createImageBitmap(file);
+    const ratio = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
+    const w = Math.round(img.width * ratio);
+    const h = Math.round(img.height * ratio);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(img, 0, 0, w, h);
+    return await new Promise<Blob>((resolve) => {
+      canvas.toBlob(
+        (b) => resolve(b ?? file),
+        "image/jpeg",
+        JPEG_QUALITY
+      );
+    });
+  } catch {
+    return file;
+  }
+}
 
 export default function UploadPhotoForm({
   taskId,
@@ -15,12 +49,13 @@ export default function UploadPhotoForm({
   currentPhotoUrl: string | null;
   taskStatus: "pending" | "approved" | "rejected";
 }) {
-  const [state, action, pending] = useActionState<ActionResult | null, FormData>(
-    uploadPhotoAction,
-    null
-  );
+  const [state, formAction, pending] = useActionState<
+    ActionResult | null,
+    FormData
+  >(uploadPhotoAction, null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [compressing, setCompressing] = useState(false);
   const previewRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -59,10 +94,29 @@ export default function UploadPhotoForm({
     }
   }
 
-  return (
-    <form action={action} className="flex flex-col gap-4">
-      <input type="hidden" name="taskId" value={taskId} />
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const file = fileInputRef.current?.files?.[0];
+    if (!file) return;
 
+    setCompressing(true);
+    let blob: Blob;
+    try {
+      blob = await compressImage(file);
+    } finally {
+      setCompressing(false);
+    }
+
+    const fd = new FormData();
+    fd.set("taskId", taskId);
+    fd.set("photo", blob, "photo.jpg");
+    startTransition(() => formAction(fd));
+  }
+
+  const busy = pending || compressing;
+
+  return (
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <input
         ref={fileInputRef}
         id="photo"
@@ -117,7 +171,7 @@ export default function UploadPhotoForm({
 
       <Button
         type="submit"
-        disabled={pending}
+        disabled={busy}
         leftIcon={
           previewUrl || !currentPhotoUrl ? (
             <Camera size={16} className="text-[#fffdf8]" />
@@ -126,7 +180,9 @@ export default function UploadPhotoForm({
           )
         }
       >
-        {pending
+        {compressing
+          ? "Preparing photo…"
+          : pending
           ? "Uploading…"
           : previewUrl
           ? "Upload photo"
